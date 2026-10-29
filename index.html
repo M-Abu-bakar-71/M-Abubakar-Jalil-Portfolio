@@ -195,6 +195,7 @@ a.c-item:hover{border-color:var(--a2);transform:translateX(8px)}
 .form input,.form textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px 16px;color:#fff;font-family:var(--body);font-size:14px;resize:none;transition:.2s}
 .form input:focus,.form textarea:focus{outline:none;border-color:var(--a1);box-shadow:0 0 0 3px rgba(108,92,231,.18)}
 .form .btn{align-self:flex-start}
+.err{display:none;color:#ff7a7a;font-size:13.5px}
 .ok{display:none;padding:22px;border:1px dashed var(--a2);border-radius:14px;font-weight:600}
 
 /* footer */
@@ -535,12 +536,14 @@ footer li a:hover{color:var(--a2)}
       <form class="form rv" id="contactForm">
         <div id="formFields" style="display:flex;flex-direction:column;gap:16px">
           <div class="form-row">
-            <div><label>Name</label><input type="text" placeholder="Your name" required></div>
-            <div><label>Email</label><input type="email" placeholder="you@email.com" required></div>
+            <div><label>Name</label><input type="text" name="name" placeholder="Your name" required></div>
+            <div><label>Email</label><input type="email" name="email" placeholder="you@email.com" required></div>
           </div>
-          <div><label>Subject</label><input type="text" placeholder="What's this about?" required></div>
-          <div><label>Message</label><textarea rows="5" placeholder="Tell me about the project or role" required></textarea></div>
-          <button type="submit" class="btn btn-primary">Send Message <i class="fa-solid fa-paper-plane"></i></button>
+          <div><label>Subject</label><input type="text" name="subject" placeholder="What's this about?" required></div>
+          <div><label>Message</label><textarea rows="5" name="message" placeholder="Tell me about the project or role" required></textarea></div>
+          <input type="text" name="_honey" tabindex="-1" autocomplete="off" style="display:none">
+          <button type="submit" id="sendBtn" class="btn btn-primary">Send Message <i class="fa-solid fa-paper-plane"></i></button>
+          <div class="err" id="err"></div>
         </div>
         <div class="ok" id="ok">Thanks — I'll get back to you soon. 🚀</div>
       </form>
@@ -643,10 +646,34 @@ document.querySelectorAll('.filter').forEach(b => b.addEventListener('click', ()
   document.querySelectorAll('.proj').forEach(p => p.classList.toggle('hide', b.dataset.f !== 'all' && p.dataset.c !== b.dataset.f));
 }));
 
-document.getElementById('contactForm').addEventListener('submit', e => {
+/* contact form -> your email via FormSubmit */
+const CONTACT_EMAIL = 'abubakarjalil421@gmail.com';
+document.getElementById('contactForm').addEventListener('submit', async e => {
   e.preventDefault();
-  document.getElementById('formFields').style.display = 'none';
-  document.getElementById('ok').style.display = 'block';
+  const form = e.target, btn = document.getElementById('sendBtn'), err = document.getElementById('err');
+  err.style.display = 'none';
+  const data = Object.fromEntries(new FormData(form));
+  if(data._honey) return;
+  btn.disabled = true; btn.innerHTML = 'Sending...';
+  try{
+    const r = await fetch('https://formsubmit.co/ajax/' + CONTACT_EMAIL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body: JSON.stringify({
+        name:data.name, email:data.email, subject:data.subject, message:data.message,
+        _subject:'Portfolio message: ' + data.subject, _replyto:data.email, _template:'table', _captcha:'false'
+      })
+    });
+    const j = await r.json();
+    if(!r.ok || String(j.success) !== 'true') throw new Error(j.message || 'Failed');
+    document.getElementById('formFields').style.display = 'none';
+    document.getElementById('ok').style.display = 'block';
+    form.reset();
+  }catch(x){
+    err.textContent = 'Message send nahi hua. Dobara try karein ya email / LinkedIn par contact karein.';
+    err.style.display = 'block';
+    btn.disabled = false; btn.innerHTML = 'Send Message <i class="fa-solid fa-paper-plane"></i>';
+  }
 });
 
 const cv = document.getElementById('net'), cx = cv.getContext('2d'); let W, H, P;
